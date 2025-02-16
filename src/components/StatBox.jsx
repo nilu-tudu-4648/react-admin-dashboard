@@ -2,12 +2,24 @@ import { Box, Typography, useTheme } from "@mui/material";
 import { tokens } from "../theme";
 import ProgressCircle from "./ProgressCircle";
 
-const StatBox = ({ title, subtitle, icon, progress, increase }) => {
+const StatBox = ({ title, subtitle, icon, progress, increase, onClick }) => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
 
   return (
-    <Box width="100%" m="0 30px">
+    <Box 
+      width="100%" 
+      m="0 30px" 
+      onClick={onClick}
+      sx={{
+        cursor: onClick ? 'pointer' : 'default',
+        '&:hover': onClick ? {
+          backgroundColor: colors.primary[400],
+          transform: 'scale(1.02)',
+          transition: 'all 0.3s ease-in-out'
+        } : {}
+      }}
+    >
       <Box display="flex" justifyContent="space-between">
         <Box>
           {icon}

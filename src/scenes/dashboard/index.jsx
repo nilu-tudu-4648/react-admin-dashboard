@@ -1,31 +1,30 @@
 import { Box, Button, IconButton, Typography, useTheme } from "@mui/material";
 import { tokens } from "../../theme";
-import { mockTransactions } from "../../data/mockData";
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
-import EmailIcon from "@mui/icons-material/Email";
-import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
-import PersonAddIcon from "@mui/icons-material/PersonAdd";
-import TrafficIcon from "@mui/icons-material/Traffic";
+import PeopleIcon from "@mui/icons-material/People";
+import PersonOffIcon from "@mui/icons-material/PersonOff";
+import HowToRegIcon from "@mui/icons-material/HowToReg";
+import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import Header from "../../components/Header";
 import LineChart from "../../components/LineChart";
-import GeographyChart from "../../components/GeographyChart";
 import BarChart from "../../components/BarChart";
 import StatBox from "../../components/StatBox";
-import ProgressCircle from "../../components/ProgressCircle";
-import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
-  const { isLogedIn } = useSelector(
-    (state) => state.entities.authReducer
-  );
-  console.log({isLogedIn})
+  const navigate = useNavigate();
+  // const { isLogedIn } = useSelector((state) => state.entities.authReducer);
+
   return (
     <Box m="20px">
       {/* HEADER */}
       <Box display="flex" justifyContent="space-between" alignItems="center">
-        <Header title="DASHBOARD" subtitle="Welcome to your dashboard" />
+        <Header
+          title="LIBRARY DASHBOARD"
+          subtitle="Welcome to your library management dashboard"
+        />
 
         <Box>
           <Button
@@ -59,12 +58,13 @@ const Dashboard = () => {
           justifyContent="center"
         >
           <StatBox
-            title="12,361"
-            subtitle="Emails Sent"
+            onClick={() => navigate("/allstudents")}
+            title="1,234"
+            subtitle="Total Students"
             progress="0.75"
             increase="+14%"
             icon={
-              <EmailIcon
+              <PeopleIcon
                 sx={{ color: colors.greenAccent[600], fontSize: "26px" }}
               />
             }
@@ -78,31 +78,13 @@ const Dashboard = () => {
           justifyContent="center"
         >
           <StatBox
-            title="431,225"
-            subtitle="Sales Obtained"
-            progress="0.50"
-            increase="+21%"
-            icon={
-              <PointOfSaleIcon
-                sx={{ color: colors.greenAccent[600], fontSize: "26px" }}
-              />
-            }
-          />
-        </Box>
-        <Box
-          gridColumn="span 3"
-          backgroundColor={colors.primary[400]}
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-        >
-          <StatBox
-            title="32,441"
-            subtitle="New Clients"
-            progress="0.30"
+            onClick={() => navigate("/attendance/present")}
+            title="892"
+            subtitle="Present Today"
+            progress="0.72"
             increase="+5%"
             icon={
-              <PersonAddIcon
+              <HowToRegIcon
                 sx={{ color: colors.greenAccent[600], fontSize: "26px" }}
               />
             }
@@ -116,13 +98,34 @@ const Dashboard = () => {
           justifyContent="center"
         >
           <StatBox
-            title="1,325,134"
-            subtitle="Traffic Received"
-            progress="0.80"
-            increase="+43%"
+            onClick={() => navigate("/attendance/absent")}
+            title="342"
+            subtitle="Absent Today"
+            progress="0.28"
+            increase="-2%"
             icon={
-              <TrafficIcon
-                sx={{ color: colors.greenAccent[600], fontSize: "26px" }}
+              <PersonOffIcon
+                sx={{ color: colors.redAccent[600], fontSize: "26px" }}
+              />
+            }
+          />
+        </Box>
+        <Box
+          gridColumn="span 3"
+          backgroundColor={colors.primary[400]}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+        >
+          <StatBox
+            onClick={() => navigate("/planexpire")}
+            title="45"
+            subtitle="Plan Expiry Alerts"
+            progress="0.80"
+            increase="+12"
+            icon={
+              <NotificationsActiveIcon
+                sx={{ color: colors.redAccent[600], fontSize: "26px" }}
               />
             }
           />
@@ -147,14 +150,14 @@ const Dashboard = () => {
                 fontWeight="600"
                 color={colors.grey[100]}
               >
-                Revenue Generated
+                Student Attendance Trends
               </Typography>
               <Typography
                 variant="h3"
                 fontWeight="bold"
                 color={colors.greenAccent[500]}
               >
-                $59,342.32
+                72% Average
               </Typography>
             </Box>
             <Box>
@@ -169,6 +172,8 @@ const Dashboard = () => {
             <LineChart isDashboard={true} />
           </Box>
         </Box>
+
+        {/* Notifications Panel */}
         <Box
           gridColumn="span 4"
           gridRow="span 2"
@@ -184,12 +189,37 @@ const Dashboard = () => {
             p="15px"
           >
             <Typography color={colors.grey[100]} variant="h5" fontWeight="600">
-              Recent Transactions
+              Recent Notifications
             </Typography>
           </Box>
-          {mockTransactions.map((transaction, i) => (
+          {[
+            {
+              id: 1,
+              student: "John Doe",
+              message: "Membership expires in 3 days",
+              type: "warning",
+            },
+            {
+              id: 2,
+              student: "Jane Smith",
+              message: "Absent for 3 consecutive days",
+              type: "alert",
+            },
+            {
+              id: 3,
+              student: "Mike Johnson",
+              message: "New membership activated",
+              type: "success",
+            },
+            {
+              id: 4,
+              student: "Sarah Wilson",
+              message: "Payment due reminder",
+              type: "warning",
+            },
+          ].map((notification) => (
             <Box
-              key={`${transaction.txId}-${i}`}
+              key={notification.id}
               display="flex"
               justifyContent="space-between"
               alignItems="center"
@@ -202,19 +232,24 @@ const Dashboard = () => {
                   variant="h5"
                   fontWeight="600"
                 >
-                  {transaction.txId}
+                  {notification.student}
                 </Typography>
                 <Typography color={colors.grey[100]}>
-                  {transaction.user}
+                  {notification.message}
                 </Typography>
               </Box>
-              <Box color={colors.grey[100]}>{transaction.date}</Box>
               <Box
-                backgroundColor={colors.greenAccent[500]}
+                backgroundColor={
+                  notification.type === "warning"
+                    ? colors.redAccent[500]
+                    : notification.type === "alert"
+                    ? colors.redAccent[700]
+                    : colors.greenAccent[500]
+                }
                 p="5px 10px"
                 borderRadius="4px"
               >
-                ${transaction.cost}
+                {notification.type}
               </Box>
             </Box>
           ))}
@@ -222,33 +257,7 @@ const Dashboard = () => {
 
         {/* ROW 3 */}
         <Box
-          gridColumn="span 4"
-          gridRow="span 2"
-          backgroundColor={colors.primary[400]}
-          p="30px"
-        >
-          <Typography variant="h5" fontWeight="600">
-            Campaign
-          </Typography>
-          <Box
-            display="flex"
-            flexDirection="column"
-            alignItems="center"
-            mt="25px"
-          >
-            <ProgressCircle size="125" />
-            <Typography
-              variant="h5"
-              color={colors.greenAccent[500]}
-              sx={{ mt: "15px" }}
-            >
-              $48,352 revenue generated
-            </Typography>
-            <Typography>Includes extra misc expenditures and costs</Typography>
-          </Box>
-        </Box>
-        <Box
-          gridColumn="span 4"
+          gridColumn="span 6"
           gridRow="span 2"
           backgroundColor={colors.primary[400]}
         >
@@ -257,14 +266,15 @@ const Dashboard = () => {
             fontWeight="600"
             sx={{ padding: "30px 30px 0 30px" }}
           >
-            Sales Quantity
+            Monthly Attendance Statistics
           </Typography>
           <Box height="250px" mt="-20px">
             <BarChart isDashboard={true} />
           </Box>
         </Box>
+
         <Box
-          gridColumn="span 4"
+          gridColumn="span 6"
           gridRow="span 2"
           backgroundColor={colors.primary[400]}
           padding="30px"
@@ -274,10 +284,10 @@ const Dashboard = () => {
             fontWeight="600"
             sx={{ marginBottom: "15px" }}
           >
-            Geography Based Traffic
+            Active vs Inactive Students
           </Typography>
           <Box height="200px">
-            <GeographyChart isDashboard={true} />
+            <BarChart isDashboard={true} />
           </Box>
         </Box>
       </Box>

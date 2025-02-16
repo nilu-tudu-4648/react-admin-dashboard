@@ -1,8 +1,41 @@
-import { Box, Button, TextField } from "@mui/material";
+import { Box, Button, TextField, MenuItem } from "@mui/material";
 import { Formik } from "formik";
 import * as yup from "yup";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import Header from "../../components/Header";
+
+// Helper function for validating shift duration
+const validateShiftDuration = (startTime, endTime) => {
+  if (!startTime || !endTime) return true;
+
+  const parseTime = (timeStr) => {
+    const [time, period] = timeStr.split(' ');
+    let [hours, minutes] = time.split(':');
+    hours = parseInt(hours);
+    
+    // Convert to 24 hour format
+    if (period === 'PM' && hours !== 12) {
+      hours += 12;
+    } else if (period === 'AM' && hours === 12) {
+      hours = 0;
+    }
+    
+    return hours + (parseInt(minutes) / 60);
+  };
+
+  const start = parseTime(startTime);
+  const end = parseTime(endTime);
+  
+  // Handle overnight shifts
+  let duration;
+  if (end < start) {
+    duration = (24 - start) + end;
+  } else {
+    duration = end - start;
+  }
+
+  return duration >= 4 && duration <= 8;
+};
 
 const Form = () => {
   const isNonMobile = useMediaQuery("(min-width:600px)");
@@ -10,6 +43,26 @@ const Form = () => {
   const handleFormSubmit = (values) => {
     console.log(values);
   };
+
+  const shiftNames = [
+    "Morning",
+    "Afternoon", 
+    "Evening"
+  ];
+
+  // Generate time slots from 6 AM to 9 PM in 1 hour intervals
+  const generateTimeSlots = () => {
+    const slots = [];
+    for (let hour = 6; hour <= 21; hour++) {
+      const time = `${hour.toString().padStart(2, '0')}:00`;
+      slots.push(
+        `${time} ${hour < 12 ? 'AM' : 'PM'}`
+      );
+    }
+    return slots;
+  };
+
+  const timeSlots = generateTimeSlots();
 
   return (
     <Box m="20px">
@@ -115,6 +168,63 @@ const Form = () => {
                 helperText={touched.address2 && errors.address2}
                 sx={{ gridColumn: "span 4" }}
               />
+              <TextField
+                fullWidth
+                variant="filled"
+                select
+                label="Shift Name"
+                onBlur={handleBlur}
+                onChange={handleChange}
+                value={values.shiftName}
+                name="shiftName"
+                error={!!touched.shiftName && !!errors.shiftName}
+                helperText={touched.shiftName && errors.shiftName}
+                sx={{ gridColumn: "span 2" }}
+              >
+                {shiftNames.map((name) => (
+                  <MenuItem key={name} value={name}>
+                    {name}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                fullWidth
+                variant="filled"
+                select
+                label="Start Time"
+                onBlur={handleBlur}
+                onChange={handleChange}
+                value={values.startTime}
+                name="startTime"
+                error={!!touched.startTime && !!errors.startTime}
+                helperText={touched.startTime && errors.startTime}
+                sx={{ gridColumn: "span 1" }}
+              >
+                {timeSlots.map((time) => (
+                  <MenuItem key={time} value={time}>
+                    {time}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                fullWidth
+                variant="filled"
+                select
+                label="End Time"
+                onBlur={handleBlur}
+                onChange={handleChange}
+                value={values.endTime}
+                name="endTime"
+                error={!!touched.endTime && !!errors.endTime}
+                helperText={touched.endTime && errors.endTime}
+                sx={{ gridColumn: "span 1" }}
+              >
+                {timeSlots.map((time) => (
+                  <MenuItem key={time} value={time}>
+                    {time}
+                  </MenuItem>
+                ))}
+              </TextField>
             </Box>
             <Box display="flex" justifyContent="end" mt="20px">
               <Button type="submit" color="secondary" variant="contained">
@@ -141,7 +251,22 @@ const checkoutSchema = yup.object().shape({
     .required("required"),
   address1: yup.string().required("required"),
   address2: yup.string().required("required"),
+  shiftName: yup.string().required("required"),
+  startTime: yup.string().required("required"),
+  endTime: yup.string()
+    .required("required")
+    .test("shift-duration", "Shift must be between 4 and 8 hours", function(value) {
+      const isValid = validateShiftDuration(this.parent.startTime, value);
+      if (!isValid) {
+        return this.createError({
+          message: "Shift duration must be between 4 and 8 hours",
+          path: "endTime"
+        });
+      }
+      return true;
+    })
 });
+
 const initialValues = {
   firstName: "",
   lastName: "",
@@ -149,6 +274,9 @@ const initialValues = {
   contact: "",
   address1: "",
   address2: "",
+  shiftName: "",
+  startTime: "",
+  endTime: ""
 };
 
 export default Form;
