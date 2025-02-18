@@ -1,296 +1,480 @@
-import { Box, Button, IconButton, Typography, useTheme } from "@mui/material";
+import { 
+  Box, 
+  Button, 
+  Card,
+  CardContent,
+  CardHeader,
+  Divider,
+  Grid,
+  IconButton, 
+  List,
+  ListItem,
+  ListItemText,
+  Typography,
+  useTheme,
+  Chip
+} from "@mui/material";
 import { tokens } from "../../theme";
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
 import PeopleIcon from "@mui/icons-material/People";
-import PersonOffIcon from "@mui/icons-material/PersonOff";
+import PersonOffIcon from "@mui/icons-material/PersonOff"; 
 import HowToRegIcon from "@mui/icons-material/HowToReg";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
-import Header from "../../components/Header";
-import LineChart from "../../components/LineChart";
-import BarChart from "../../components/BarChart";
-import StatBox from "../../components/StatBox";
 import { useNavigate } from "react-router-dom";
+import { Line, Bar } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+import { useState, useEffect } from "react";
+import { collection, query, getDocs, onSnapshot } from "firebase/firestore";
+import { db } from "../../firebaseConfig";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 const Dashboard = () => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
   const navigate = useNavigate();
-  // const { isLogedIn } = useSelector((state) => state.entities.authReducer);
+  const [totalStudents, setTotalStudents] = useState(0);
+  const [presentStudents, setPresentStudents] = useState(0);
+  const [absentStudents, setAbsentStudents] = useState(0);
+  const [expiringPlans, setExpiringPlans] = useState(0);
+  const [monthlyAttendance, setMonthlyAttendance] = useState([]);
+  const [weeklyAttendance, setWeeklyAttendance] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+
+  useEffect(() => {
+    // Set up real-time listener for users collection
+    const usersRef = collection(db, "users");
+    const unsubscribe = onSnapshot(usersRef, (snapshot) => {
+      let total = 0;
+      let present = 0;
+      let expiring = 0;
+      let recentNotifications = [];
+
+      snapshot.forEach((doc) => {
+        const userData = doc.data();
+        total++;
+        
+        if (userData.isLoggedIn) {
+          present++;
+        }
+
+        // Check for plans expiring in next 7 days
+        if (userData.planExpiryDate) {
+          const expiryDate = userData.planExpiryDate.toDate();
+          const daysUntilExpiry = Math.ceil((expiryDate - new Date()) / (1000 * 60 * 60 * 24));
+          if (daysUntilExpiry <= 7 && daysUntilExpiry > 0) {
+            expiring++;
+            recentNotifications.push({
+              id: doc.id,
+              student: `${userData.firstName} ${userData.lastName}`,
+              message: `Membership expires in ${daysUntilExpiry} days`,
+              type: "warning"
+            });
+          }
+        }
+
+        // Add notification for inactive users
+        if (!userData.isLoggedIn && userData.lastLogin) {
+          const lastLogin = userData.lastLogin.toDate();
+          const daysSinceLogin = Math.ceil((new Date() - lastLogin) / (1000 * 60 * 60 * 24));
+          if (daysSinceLogin >= 3) {
+            recentNotifications.push({
+              id: doc.id,
+              student: `${userData.firstName} ${userData.lastName}`,
+              message: `Absent for ${daysSinceLogin} consecutive days`,
+              type: "alert"
+            });
+          }
+        }
+      });
+
+      setTotalStudents(total);
+      setPresentStudents(present);
+      setAbsentStudents(total - present);
+      setExpiringPlans(expiring);
+      setNotifications(recentNotifications.slice(0, 4)); // Keep only 4 most recent notifications
+
+      // Calculate attendance percentages for charts
+      const currentDate = new Date();
+      const monthlyData = Array(6).fill(0);
+      const weeklyData = Array(5).fill(0);
+
+      snapshot.forEach((doc) => {
+        const userData = doc.data();
+        if (userData.attendance) {
+          // Process monthly attendance
+          Object.entries(userData.attendance).forEach(([date, wasPresent]) => {
+            const attendanceDate = new Date(date);
+            const monthDiff = currentDate.getMonth() - attendanceDate.getMonth();
+            if (monthDiff >= 0 && monthDiff < 6) {
+              monthlyData[5 - monthDiff] += wasPresent ? 1 : 0;
+            }
+          });
+
+          // Process weekly attendance
+          const dayOfWeek = currentDate.getDay();
+          Object.entries(userData.attendance).forEach(([date, wasPresent]) => {
+            const attendanceDate = new Date(date);
+            const dayDiff = Math.floor((currentDate - attendanceDate) / (1000 * 60 * 60 * 24));
+            if (dayDiff >= 0 && dayDiff < 5) {
+              weeklyData[dayDiff] += wasPresent ? 1 : 0;
+            }
+          });
+        }
+      });
+
+      setMonthlyAttendance(monthlyData.map(count => (count / total) * 100));
+      setWeeklyAttendance(weeklyData.map(count => (count / total) * 100));
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []);
+
+  const lineChartData = {
+    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+    datasets: [
+      {
+        label: 'Attendance %',
+        data: monthlyAttendance,
+        borderColor: colors.greenAccent[500],
+        tension: 0.3
+      }
+    ]
+  };
+
+  const barChartData = {
+    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+    datasets: [
+      {
+        label: 'Present %',
+        data: weeklyAttendance,
+        backgroundColor: colors.greenAccent[500],
+      }
+    ]
+  };
 
   return (
-    <Box m="20px">
+    <Box p={3}>
       {/* HEADER */}
-      <Box display="flex" justifyContent="space-between" alignItems="center">
-        <Header
-          title="LIBRARY DASHBOARD"
-          subtitle="Welcome to your library management dashboard"
-        />
-
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Box>
-          <Button
-            sx={{
-              backgroundColor: colors.blueAccent[700],
-              color: colors.grey[100],
-              fontSize: "14px",
-              fontWeight: "bold",
-              padding: "10px 20px",
+          <Typography variant="h4" fontWeight="bold" color={colors.grey[100]}>
+            LIBRARY DASHBOARD
+          </Typography>
+          <Typography variant="subtitle1" color={colors.grey[300]}>
+            Welcome to your library management dashboard
+          </Typography>
+        </Box>
+
+        <Button
+          variant="contained"
+          startIcon={<DownloadOutlinedIcon />}
+          sx={{
+            bgcolor: colors.blueAccent[700],
+            '&:hover': { bgcolor: colors.blueAccent[800] }
+          }}
+        >
+          Download Reports
+        </Button>
+      </Box>
+
+      {/* STATS CARDS */}
+      <Grid container spacing={3} mb={3}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card 
+            sx={{ 
+              bgcolor: colors.primary[400],
+              cursor: 'pointer',
+              transition: '0.3s',
+              '&:hover': { transform: 'translateY(-5px)' }
             }}
-          >
-            <DownloadOutlinedIcon sx={{ mr: "10px" }} />
-            Download Reports
-          </Button>
-        </Box>
-      </Box>
-
-      {/* GRID & CHARTS */}
-      <Box
-        display="grid"
-        gridTemplateColumns="repeat(12, 1fr)"
-        gridAutoRows="140px"
-        gap="20px"
-      >
-        {/* ROW 1 */}
-        <Box
-          gridColumn="span 3"
-          backgroundColor={colors.primary[400]}
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-        >
-          <StatBox
             onClick={() => navigate("/allstudents")}
-            title="1,234"
-            subtitle="Total Students"
-            progress="0.75"
-            increase="+14%"
-            icon={
-              <PeopleIcon
-                sx={{ color: colors.greenAccent[600], fontSize: "26px" }}
-              />
-            }
-          />
-        </Box>
-        <Box
-          gridColumn="span 3"
-          backgroundColor={colors.primary[400]}
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-        >
-          <StatBox
+          >
+            <CardContent>
+              <Box display="flex" justifyContent="space-between">
+                <Box>
+                  <Typography variant="h5" color={colors.grey[100]}>
+                    Total Students
+                  </Typography>
+                  <Typography variant="h3" color={colors.grey[100]} fontWeight="bold">
+                    {totalStudents}
+                  </Typography>
+                  <Typography variant="subtitle2" color={colors.greenAccent[500]}>
+                    Real-time count
+                  </Typography>
+                </Box>
+                <PeopleIcon sx={{ fontSize: 40, color: colors.greenAccent[500] }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Card 
+            sx={{ 
+              bgcolor: colors.primary[400],
+              cursor: 'pointer',
+              transition: '0.3s',
+              '&:hover': { transform: 'translateY(-5px)' }
+            }}
             onClick={() => navigate("/attendance/present")}
-            title="892"
-            subtitle="Present Today"
-            progress="0.72"
-            increase="+5%"
-            icon={
-              <HowToRegIcon
-                sx={{ color: colors.greenAccent[600], fontSize: "26px" }}
-              />
-            }
-          />
-        </Box>
-        <Box
-          gridColumn="span 3"
-          backgroundColor={colors.primary[400]}
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-        >
-          <StatBox
+          >
+            <CardContent>
+              <Box display="flex" justifyContent="space-between">
+                <Box>
+                  <Typography variant="h5" color={colors.grey[100]}>
+                    Present Today
+                  </Typography>
+                  <Typography variant="h3" color={colors.grey[100]} fontWeight="bold">
+                    {presentStudents}
+                  </Typography>
+                  <Typography variant="subtitle2" color={colors.greenAccent[500]}>
+                    Currently in library
+                  </Typography>
+                </Box>
+                <HowToRegIcon sx={{ fontSize: 40, color: colors.greenAccent[500] }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Card 
+            sx={{ 
+              bgcolor: colors.primary[400],
+              cursor: 'pointer',
+              transition: '0.3s',
+              '&:hover': { transform: 'translateY(-5px)' }
+            }}
             onClick={() => navigate("/attendance/absent")}
-            title="342"
-            subtitle="Absent Today"
-            progress="0.28"
-            increase="-2%"
-            icon={
-              <PersonOffIcon
-                sx={{ color: colors.redAccent[600], fontSize: "26px" }}
-              />
-            }
-          />
-        </Box>
-        <Box
-          gridColumn="span 3"
-          backgroundColor={colors.primary[400]}
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-        >
-          <StatBox
+          >
+            <CardContent>
+              <Box display="flex" justifyContent="space-between">
+                <Box>
+                  <Typography variant="h5" color={colors.grey[100]}>
+                    Absent Today
+                  </Typography>
+                  <Typography variant="h3" color={colors.grey[100]} fontWeight="bold">
+                    {absentStudents}
+                  </Typography>
+                  <Typography variant="subtitle2" color={colors.redAccent[500]}>
+                    Not checked in
+                  </Typography>
+                </Box>
+                <PersonOffIcon sx={{ fontSize: 40, color: colors.redAccent[500] }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Card 
+            sx={{ 
+              bgcolor: colors.primary[400],
+              cursor: 'pointer',
+              transition: '0.3s',
+              '&:hover': { transform: 'translateY(-5px)' }
+            }}
             onClick={() => navigate("/planexpire")}
-            title="45"
-            subtitle="Plan Expiry Alerts"
-            progress="0.80"
-            increase="+12"
-            icon={
-              <NotificationsActiveIcon
-                sx={{ color: colors.redAccent[600], fontSize: "26px" }}
-              />
-            }
-          />
-        </Box>
-
-        {/* ROW 2 */}
-        <Box
-          gridColumn="span 8"
-          gridRow="span 2"
-          backgroundColor={colors.primary[400]}
-        >
-          <Box
-            mt="25px"
-            p="0 30px"
-            display="flex "
-            justifyContent="space-between"
-            alignItems="center"
           >
-            <Box>
-              <Typography
-                variant="h5"
-                fontWeight="600"
-                color={colors.grey[100]}
-              >
-                Student Attendance Trends
-              </Typography>
-              <Typography
-                variant="h3"
-                fontWeight="bold"
-                color={colors.greenAccent[500]}
-              >
-                72% Average
-              </Typography>
-            </Box>
-            <Box>
-              <IconButton>
-                <DownloadOutlinedIcon
-                  sx={{ fontSize: "26px", color: colors.greenAccent[500] }}
+            <CardContent>
+              <Box display="flex" justifyContent="space-between">
+                <Box>
+                  <Typography variant="h5" color={colors.grey[100]}>
+                    Plan Expiry Alerts
+                  </Typography>
+                  <Typography variant="h3" color={colors.grey[100]} fontWeight="bold">
+                    {expiringPlans}
+                  </Typography>
+                  <Typography variant="subtitle2" color={colors.redAccent[500]}>
+                    Expiring in 7 days
+                  </Typography>
+                </Box>
+                <NotificationsActiveIcon sx={{ fontSize: 40, color: colors.redAccent[500] }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* CHARTS & NOTIFICATIONS */}
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={8}>
+          <Card sx={{ bgcolor: colors.primary[400], height: '100%' }}>
+            <CardHeader
+              title={
+                <Box display="flex" justifyContent="space-between" alignItems="center">
+                  <Box>
+                    <Typography variant="h5" color={colors.grey[100]}>
+                      Student Attendance Trends
+                    </Typography>
+                    <Typography variant="h6" color={colors.greenAccent[500]}>
+                      {monthlyAttendance.length > 0 
+                        ? `${Math.round(monthlyAttendance.reduce((a, b) => a + b) / monthlyAttendance.length)}% Average`
+                        : "Loading..."}
+                    </Typography>
+                  </Box>
+                  <IconButton>
+                    <DownloadOutlinedIcon sx={{ color: colors.greenAccent[500] }} />
+                  </IconButton>
+                </Box>
+              }
+            />
+            <Divider />
+            <CardContent>
+              <Box height={300}>
+                <Line 
+                  data={lineChartData}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                      y: {
+                        beginAtZero: true,
+                        max: 100
+                      }
+                    }
+                  }}
                 />
-              </IconButton>
-            </Box>
-          </Box>
-          <Box height="250px" m="-20px 0 0 0">
-            <LineChart isDashboard={true} />
-          </Box>
-        </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
 
-        {/* Notifications Panel */}
-        <Box
-          gridColumn="span 4"
-          gridRow="span 2"
-          backgroundColor={colors.primary[400]}
-          overflow="auto"
-        >
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-            borderBottom={`4px solid ${colors.primary[500]}`}
-            colors={colors.grey[100]}
-            p="15px"
-          >
-            <Typography color={colors.grey[100]} variant="h5" fontWeight="600">
-              Recent Notifications
-            </Typography>
-          </Box>
-          {[
-            {
-              id: 1,
-              student: "John Doe",
-              message: "Membership expires in 3 days",
-              type: "warning",
-            },
-            {
-              id: 2,
-              student: "Jane Smith",
-              message: "Absent for 3 consecutive days",
-              type: "alert",
-            },
-            {
-              id: 3,
-              student: "Mike Johnson",
-              message: "New membership activated",
-              type: "success",
-            },
-            {
-              id: 4,
-              student: "Sarah Wilson",
-              message: "Payment due reminder",
-              type: "warning",
-            },
-          ].map((notification) => (
-            <Box
-              key={notification.id}
-              display="flex"
-              justifyContent="space-between"
-              alignItems="center"
-              borderBottom={`4px solid ${colors.primary[500]}`}
-              p="15px"
-            >
-              <Box>
-                <Typography
-                  color={colors.greenAccent[500]}
-                  variant="h5"
-                  fontWeight="600"
+        <Grid item xs={12} md={4}>
+          <Card sx={{ bgcolor: colors.primary[400], height: '100%' }}>
+            <CardHeader
+              title={
+                <Typography variant="h5" color={colors.grey[100]}>
+                  Recent Notifications
+                </Typography>
+              }
+            />
+            <Divider />
+            <List sx={{ p: 0 }}>
+              {notifications.map((notification) => (
+                <ListItem
+                  key={notification.id}
+                  divider
+                  secondaryAction={
+                    <Chip
+                      label={notification.type}
+                      size="small"
+                      sx={{
+                        bgcolor: notification.type === "warning"
+                          ? colors.redAccent[500]
+                          : notification.type === "alert"
+                          ? colors.redAccent[700]
+                          : colors.greenAccent[500],
+                        color: colors.grey[100]
+                      }}
+                    />
+                  }
                 >
-                  {notification.student}
-                </Typography>
-                <Typography color={colors.grey[100]}>
-                  {notification.message}
-                </Typography>
-              </Box>
-              <Box
-                backgroundColor={
-                  notification.type === "warning"
-                    ? colors.redAccent[500]
-                    : notification.type === "alert"
-                    ? colors.redAccent[700]
-                    : colors.greenAccent[500]
-                }
-                p="5px 10px"
-                borderRadius="4px"
-              >
-                {notification.type}
-              </Box>
-            </Box>
-          ))}
-        </Box>
+                  <ListItemText
+                    primary={
+                      <Typography color={colors.greenAccent[500]}>
+                        {notification.student}
+                      </Typography>
+                    }
+                    secondary={
+                      <Typography color={colors.grey[100]}>
+                        {notification.message}
+                      </Typography>
+                    }
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </Card>
+        </Grid>
 
-        {/* ROW 3 */}
-        <Box
-          gridColumn="span 6"
-          gridRow="span 2"
-          backgroundColor={colors.primary[400]}
-        >
-          <Typography
-            variant="h5"
-            fontWeight="600"
-            sx={{ padding: "30px 30px 0 30px" }}
-          >
-            Monthly Attendance Statistics
-          </Typography>
-          <Box height="250px" mt="-20px">
-            <BarChart isDashboard={true} />
-          </Box>
-        </Box>
+        <Grid item xs={12} md={6}>
+          <Card sx={{ bgcolor: colors.primary[400] }}>
+            <CardHeader
+              title={
+                <Typography variant="h5" color={colors.grey[100]}>
+                  Weekly Attendance Statistics
+                </Typography>
+              }
+            />
+            <Divider />
+            <CardContent>
+              <Box height={300}>
+                <Bar 
+                  data={barChartData}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                      y: {
+                        beginAtZero: true,
+                        max: 100
+                      }
+                    }
+                  }}
+                />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
 
-        <Box
-          gridColumn="span 6"
-          gridRow="span 2"
-          backgroundColor={colors.primary[400]}
-          padding="30px"
-        >
-          <Typography
-            variant="h5"
-            fontWeight="600"
-            sx={{ marginBottom: "15px" }}
-          >
-            Active vs Inactive Students
-          </Typography>
-          <Box height="200px">
-            <BarChart isDashboard={true} />
-          </Box>
-        </Box>
-      </Box>
+        <Grid item xs={12} md={6}>
+          <Card sx={{ bgcolor: colors.primary[400] }}>
+            <CardHeader
+              title={
+                <Typography variant="h5" color={colors.grey[100]}>
+                  Active vs Inactive Students
+                </Typography>
+              }
+            />
+            <Divider />
+            <CardContent>
+              <Box height={300}>
+                <Bar 
+                  data={{
+                    labels: ['Active', 'Inactive'],
+                    datasets: [{
+                      label: 'Students',
+                      data: [presentStudents, absentStudents],
+                      backgroundColor: [colors.greenAccent[500], colors.redAccent[500]]
+                    }]
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                      y: {
+                        beginAtZero: true
+                      }
+                    }
+                  }}
+                />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
     </Box>
   );
 };

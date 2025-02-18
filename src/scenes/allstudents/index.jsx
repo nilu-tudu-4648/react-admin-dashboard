@@ -1,17 +1,46 @@
-import { Box, useTheme, Dialog, DialogTitle, DialogContent, Button, TextField } from "@mui/material";
+import { Box, useTheme, Dialog, DialogTitle, DialogContent, Button, TextField, CircularProgress, IconButton, DialogActions, DialogContentText } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import { tokens } from "../../theme";
 import Header from "../../components/Header";
-import { mockDataTeam } from "../../data/mockData";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Formik } from "formik";
 import * as yup from "yup";
+import { collection, query, getDocs, deleteDoc, doc, updateDoc, Timestamp } from "firebase/firestore";
+import { db } from "../../firebaseConfig";
+import DeleteIcon from '@mui/icons-material/Delete';
 
 const AllStudents = () => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
   const [open, setOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshData, setRefreshData] = useState(false); // Add refresh state
+
+  const fetchUsers = async () => {
+    try {
+      const usersRef = collection(db, "users");
+      const q = query(usersRef);
+      const querySnapshot = await getDocs(q);
+
+      const fetchedUsers = [];
+      querySnapshot.forEach((doc) => {
+        fetchedUsers.push({ id: doc.id, ...doc.data() });
+      });
+
+      setUsers(fetchedUsers);
+      setLoading(false);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, [refreshData]); // Add refreshData as dependency
 
   const handleNameClick = (params) => {
     setSelectedMember(params.row);
@@ -23,16 +52,52 @@ const AllStudents = () => {
     setSelectedMember(null);
   };
 
-  const handleFormSubmit = (values) => {
-    console.log(values);
-    handleClose();
+  const handleDeleteClick = (member) => {
+    setSelectedMember(member);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteClose = () => {
+    setDeleteDialogOpen(false);
+    setSelectedMember(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      await deleteDoc(doc(db, "users", selectedMember.id));
+      setDeleteDialogOpen(false);
+      setSelectedMember(null);
+      setRefreshData(prev => !prev); // Trigger refresh
+    } catch (error) {
+      console.error("Error deleting user:", error);
+    }
+  };
+
+  const handleFormSubmit = async (values) => {
+    try {
+      // Convert date string to Timestamp
+      const expiryDate = new Date(values.planExpiryDate);
+      const expiryTimestamp = Timestamp.fromDate(expiryDate);
+
+      const updatedValues = {
+        ...values,
+        planExpiryDate: expiryTimestamp,
+        isActive: values.isActive === "true" // Convert string to boolean
+      };
+
+      await updateDoc(doc(db, "users", selectedMember.id), updatedValues);
+      handleClose();
+      setRefreshData(prev => !prev); // Trigger refresh
+    } catch (error) {
+      console.error("Error updating user:", error);
+    }
   };
 
   const columns = [
     { field: "id", headerName: "ID", flex: 0.5 },
     {
       field: "name",
-      headerName: "Name",
+      headerName: "Name", 
       flex: 1,
       renderCell: (params) => (
         <Box
@@ -50,21 +115,71 @@ const AllStudents = () => {
       )
     },
     { field: "email", headerName: "Email", flex: 1 },
-    { field: "contact", headerName: "Phone Number", flex: 1 },
-    { field: "membershipType", headerName: "Membership Type", flex: 1 },
-    { field: "status", headerName: "Status", flex: 1 },
-    { field: "booksIssued", headerName: "Books Issued", flex: 1 },
+    { field: "phone", headerName: "Phone Number", flex: 1 },
+    { field: "shiftName", headerName: "Shift Name", flex: 1 },
+    { field: "shiftTime", headerName: "Shift Time", flex: 1 },
+    { 
+      field: "planExpiryDate", 
+      headerName: "Plan Expiry Date", 
+      flex: 1,
+      valueFormatter: (params) => {
+        if (params.value && params.value.seconds) {
+          const date = new Date(params.value.seconds * 1000);
+          return date.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: '2-digit', 
+            year: 'numeric'
+          });
+        }
+        return '';
+      }
+    },
+    { 
+      field: "isActive", 
+      headerName: "Status", 
+      flex: 1,
+      renderCell: (params) => (
+        params.row.isActive ? "Active" : "Inactive"
+      )
+    },
+    {
+      field: "actions",
+      headerName: "Actions",
+      flex: 0.5,
+      renderCell: (params) => (
+        <IconButton
+          onClick={() => handleDeleteClick(params.row)}
+          color="error"
+        >
+          <DeleteIcon />
+        </IconButton>
+      )
+    }
   ];
 
   const checkoutSchema = yup.object().shape({
     firstName: yup.string().required("required"),
     lastName: yup.string().required("required"),
     email: yup.string().email("invalid email").required("required"),
-    contact: yup.string().required("required"),
-    membershipType: yup.string().required("required"),
-    status: yup.string().required("required"),
-    booksIssued: yup.number().required("required"),
+    phone: yup.string().required("required"),
+    shiftName: yup.string().required("required"),
+    shiftTime: yup.string().required("required"),
+    isActive: yup.boolean().required("required"),
+    planExpiryDate: yup.date().required("required"),
   });
+
+  if (loading) {
+    return (
+      <Box 
+        display="flex" 
+        justifyContent="center" 
+        alignItems="center" 
+        height="100vh"
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box m="20px">
@@ -95,7 +210,7 @@ const AllStudents = () => {
           },
         }}
       >
-        <DataGrid rows={mockDataTeam} columns={columns} />
+        <DataGrid rows={users} columns={columns} />
       </Box>
 
       <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
@@ -104,7 +219,13 @@ const AllStudents = () => {
           {selectedMember && (
             <Formik
               onSubmit={handleFormSubmit}
-              initialValues={selectedMember}
+              initialValues={{
+                ...selectedMember,
+                planExpiryDate: selectedMember.planExpiryDate ? 
+                  new Date(selectedMember.planExpiryDate.seconds * 1000).toISOString().split('T')[0] : 
+                  new Date().toISOString().split('T')[0],
+                isActive: selectedMember.isActive.toString() // Convert boolean to string
+              }}
               validationSchema={checkoutSchema}
             >
               {({
@@ -165,53 +286,73 @@ const AllStudents = () => {
                       fullWidth
                       variant="filled"
                       type="text"
-                      label="Contact Number"
+                      label="Phone Number"
                       onBlur={handleBlur}
                       onChange={handleChange}
-                      value={values.contact}
-                      name="contact"
-                      error={!!touched.contact && !!errors.contact}
-                      helperText={touched.contact && errors.contact}
+                      value={values.phone}
+                      name="phone"
+                      error={!!touched.phone && !!errors.phone}
+                      helperText={touched.phone && errors.phone}
                       sx={{ gridColumn: "span 4" }}
                     />
                     <TextField
                       fullWidth
                       variant="filled"
                       type="text"
-                      label="Membership Type"
+                      label="Shift Name"
                       onBlur={handleBlur}
                       onChange={handleChange}
-                      value={values.membershipType}
-                      name="membershipType"
-                      error={!!touched.membershipType && !!errors.membershipType}
-                      helperText={touched.membershipType && errors.membershipType}
+                      value={values.shiftName}
+                      name="shiftName"
+                      error={!!touched.shiftName && !!errors.shiftName}
+                      helperText={touched.shiftName && errors.shiftName}
                       sx={{ gridColumn: "span 2" }}
                     />
                     <TextField
                       fullWidth
                       variant="filled"
                       type="text"
+                      label="Shift Time"
+                      onBlur={handleBlur}
+                      onChange={handleChange}
+                      value={values.shiftTime}
+                      name="shiftTime"
+                      error={!!touched.shiftTime && !!errors.shiftTime}
+                      helperText={touched.shiftTime && errors.shiftTime}
+                      sx={{ gridColumn: "span 2" }}
+                    />
+                    <TextField
+                      fullWidth
+                      variant="filled"
+                      select
                       label="Status"
                       onBlur={handleBlur}
                       onChange={handleChange}
-                      value={values.status}
-                      name="status"
-                      error={!!touched.status && !!errors.status}
-                      helperText={touched.status && errors.status}
+                      value={values.isActive}
+                      name="isActive"
+                      error={!!touched.isActive && !!errors.isActive}
+                      helperText={touched.isActive && errors.isActive}
                       sx={{ gridColumn: "span 2" }}
-                    />
+                      SelectProps={{
+                        native: true,
+                      }}
+                    >
+                      <option value={true}>Active</option>
+                      <option value={false}>Inactive</option>
+                    </TextField>
                     <TextField
-                      fullWidth
+                      // fullWidth
                       variant="filled"
-                      type="number"
-                      label="Books Issued"
+                      type="date"
+                      label="Plan Expiry Date"
                       onBlur={handleBlur}
                       onChange={handleChange}
-                      value={values.booksIssued}
-                      name="booksIssued"
-                      error={!!touched.booksIssued && !!errors.booksIssued}
-                      helperText={touched.booksIssued && errors.booksIssued}
-                      sx={{ gridColumn: "span 4" }}
+                      value={values.planExpiryDate}
+                      name="planExpiryDate"
+                      error={!!touched.planExpiryDate && !!errors.planExpiryDate}
+                      helperText={touched.planExpiryDate && errors.planExpiryDate}
+                      sx={{ gridColumn: "span 2" }}
+                      InputLabelProps={{ shrink: true }}
                     />
                   </Box>
                   <Box display="flex" justifyContent="end" mt="20px">
@@ -227,6 +368,24 @@ const AllStudents = () => {
             </Formik>
           )}
         </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleDeleteClose}
+      >
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete this member? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteClose}>Cancel</Button>
+          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );
