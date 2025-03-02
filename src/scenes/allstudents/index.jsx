@@ -27,7 +27,10 @@ const AllStudents = () => {
 
       const fetchedUsers = [];
       querySnapshot.forEach((doc) => {
-        fetchedUsers.push({ id: doc.id, ...doc.data() });
+        const userData = doc.data();
+        if (userData.userType !== "admin") {
+          fetchedUsers.push({ id: doc.id, ...userData });
+        }
       });
 
       setUsers(fetchedUsers);

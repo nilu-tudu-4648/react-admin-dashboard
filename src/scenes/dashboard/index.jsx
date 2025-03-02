@@ -21,7 +21,7 @@ import PersonOffIcon from "@mui/icons-material/PersonOff";
 import HowToRegIcon from "@mui/icons-material/HowToReg";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import { useNavigate } from "react-router-dom";
-import { Line, Bar } from "react-chartjs-2";
+import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -34,7 +34,7 @@ import {
   Legend,
 } from 'chart.js';
 import { useState, useEffect } from "react";
-import { collection, query, getDocs, onSnapshot } from "firebase/firestore";
+import { collection, query, onSnapshot, where } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 
 ChartJS.register(
@@ -57,13 +57,13 @@ const Dashboard = () => {
   const [absentStudents, setAbsentStudents] = useState(0);
   const [expiringPlans, setExpiringPlans] = useState(0);
   const [monthlyAttendance, setMonthlyAttendance] = useState([]);
-  const [weeklyAttendance, setWeeklyAttendance] = useState([]);
   const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
     // Set up real-time listener for users collection
     const usersRef = collection(db, "users");
-    const unsubscribe = onSnapshot(usersRef, (snapshot) => {
+    const q = query(usersRef, where("userType", "!=", "admin"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       let total = 0;
       let present = 0;
       let expiring = 0;
@@ -131,7 +131,6 @@ const Dashboard = () => {
           });
 
           // Process weekly attendance
-          const dayOfWeek = currentDate.getDay();
           Object.entries(userData.attendance).forEach(([date, wasPresent]) => {
             const attendanceDate = new Date(date);
             const dayDiff = Math.floor((currentDate - attendanceDate) / (1000 * 60 * 60 * 24));
@@ -143,7 +142,6 @@ const Dashboard = () => {
       });
 
       setMonthlyAttendance(monthlyData.map(count => (count / total) * 100));
-      setWeeklyAttendance(weeklyData.map(count => (count / total) * 100));
     });
 
     // Cleanup subscription on unmount
@@ -158,17 +156,6 @@ const Dashboard = () => {
         data: monthlyAttendance,
         borderColor: colors.greenAccent[500],
         tension: 0.3
-      }
-    ]
-  };
-
-  const barChartData = {
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-    datasets: [
-      {
-        label: 'Present %',
-        data: weeklyAttendance,
-        backgroundColor: colors.greenAccent[500],
       }
     ]
   };
@@ -406,72 +393,6 @@ const Dashboard = () => {
                 </ListItem>
               ))}
             </List>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Card sx={{ bgcolor: colors.primary[400] }}>
-            <CardHeader
-              title={
-                <Typography variant="h5" color={colors.grey[100]}>
-                  Weekly Attendance Statistics
-                </Typography>
-              }
-            />
-            <Divider />
-            <CardContent>
-              <Box height={300}>
-                <Bar 
-                  data={barChartData}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                      y: {
-                        beginAtZero: true,
-                        max: 100
-                      }
-                    }
-                  }}
-                />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Card sx={{ bgcolor: colors.primary[400] }}>
-            <CardHeader
-              title={
-                <Typography variant="h5" color={colors.grey[100]}>
-                  Active vs Inactive Students
-                </Typography>
-              }
-            />
-            <Divider />
-            <CardContent>
-              <Box height={300}>
-                <Bar 
-                  data={{
-                    labels: ['Active', 'Inactive'],
-                    datasets: [{
-                      label: 'Students',
-                      data: [presentStudents, absentStudents],
-                      backgroundColor: [colors.greenAccent[500], colors.redAccent[500]]
-                    }]
-                  }}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                      y: {
-                        beginAtZero: true
-                      }
-                    }
-                  }}
-                />
-              </Box>
-            </CardContent>
           </Card>
         </Grid>
       </Grid>

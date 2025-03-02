@@ -1,14 +1,16 @@
-import { Box, CircularProgress } from "@mui/material";
+import { Box, CircularProgress, useTheme } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import Header from "../../components/Header";
 import { useState, useEffect } from "react";
 import { collection, query, getDocs } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
+import { tokens } from "../../theme";
 
 const PlanExpireStudents = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
-
+  const theme = useTheme();
+  const colors = tokens(theme.palette.mode);
   const handlePhoneClick = (phone, daysLeft, name) => {
     const message = `Hi ${name}, your library membership plan will expire in ${daysLeft} days. Please renew your plan to continue using our services.`;
     const encodedMessage = encodeURIComponent(message);
@@ -153,23 +155,18 @@ const PlanExpireStudents = () => {
             borderBottom: "none",
           },
           "& .name-column--cell": {
-            color: "#94e2cd",
+            color: colors.greenAccent[300],
           },
           "& .MuiDataGrid-columnHeaders": {
-            backgroundColor: "#3e4396",
+            backgroundColor: colors.blueAccent[700],
             borderBottom: "none",
           },
           "& .MuiDataGrid-virtualScroller": {
-            backgroundColor: "#1F2A40",
+            backgroundColor: colors.primary[400],
           },
           "& .MuiDataGrid-footerContainer": {
             borderTop: "none",
-            backgroundColor: "#3e4396",
-          },
-          "& .MuiDataGrid-row": {
-            "&:nth-of-type(odd)": {
-              backgroundColor: "rgba(255, 255, 255, 0.05)",
-            },
+            backgroundColor: colors.blueAccent[700],
           },
         }}
       >
