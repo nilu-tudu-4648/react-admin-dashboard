@@ -1,4 +1,4 @@
-import { Box, Typography, TextField, Button, useTheme } from "@mui/material";
+import { Box, Typography, TextField, Button, useTheme, Divider } from "@mui/material";
 import { useState } from "react";
 import { tokens } from "../../theme";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
@@ -14,14 +14,14 @@ const Auth = () => {
     password: "",
     firstName: "",
     lastName: "",
-    phone: ""
+    phone: "",
   });
   const [error, setError] = useState("");
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
@@ -42,7 +42,7 @@ const Auth = () => {
           lastName: formData.lastName.trim(),
           email: formData.email.trim(),
           phone: formData.phone.trim(),
-          userType: 'admin',
+          userType: "admin",
           isActive: true,
           isLoggedIn: true,
           visits: 1,
@@ -50,7 +50,7 @@ const Auth = () => {
           lastLoginAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         };
-        await setDoc(doc(db, 'users', userCredential.user.uid), userDoc);
+        await setDoc(doc(db, "users", userCredential.user.uid), userDoc);
         localStorage.setItem("isAuthenticated", "true");
         window.location.href = "/";
       } else {
@@ -60,8 +60,8 @@ const Auth = () => {
           formData.password
         );
         
-        const userRef = doc(db, 'users', userCredential.user.uid);
-        const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
+        const userRef = doc(db, "users", userCredential.user.uid);
+        const userDoc = await getDoc(userRef);
         await setDoc(userRef, {
           isLoggedIn: true,
           lastLoginAt: serverTimestamp(),
@@ -83,7 +83,7 @@ const Auth = () => {
       password: "",
       firstName: "",
       lastName: "",
-      phone: ""
+      phone: "",
     });
     setError("");
   };
@@ -95,27 +95,49 @@ const Auth = () => {
       alignItems="center"
       justifyContent="center"
       minHeight="100vh"
-      bgcolor={colors.primary[400]}
+      sx={{
+        background: `linear-gradient(135deg, ${colors.primary[400]}, ${colors.primary[600]})`,
+        padding: "2rem 1rem",
+      }}
     >
       <Box
         component="form"
         onSubmit={handleSubmit}
         sx={{
-          backgroundColor: colors.primary[500],
-          padding: "2rem",
-          borderRadius: "10px",
+          backgroundColor: "white",
+          padding: "2.5rem",
+          borderRadius: "15px",
           width: "100%",
-          maxWidth: "400px"
+          maxWidth: "450px",
+          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.2)",
         }}
       >
-        <Typography variant="h2" textAlign="center" mb={3}>
+        <Typography
+          variant="h2"
+          textAlign="center"
+          mb={4}
+          sx={{
+            color: colors.grey[100],
+            fontSize: "2.5rem",
+            textShadow: "1px 1px 3px rgba(0, 0, 0, 0.3)",
+          }}
+        >
           {isLogin ? "Login" : "Sign Up"}
         </Typography>
 
         {error && (
-          <Typography color="error" textAlign="center" mb={2}>
-            {error}
-          </Typography>
+          <Box
+            sx={{
+              backgroundColor: colors.redAccent[500],
+              color: colors.grey[100],
+              p: 1.5,
+              borderRadius: "5px",
+              mb: 2,
+              textAlign: "center",
+            }}
+          >
+            <Typography variant="body2">{error}</Typography>
+          </Box>
         )}
 
         {!isLogin && (
@@ -127,7 +149,9 @@ const Auth = () => {
               value={formData.firstName}
               onChange={handleChange}
               margin="normal"
-              required
+              variant="outlined"
+              InputLabelProps={{ style: { color: colors.grey[100] } }}
+              InputProps={{ style: { color: colors.grey[100] } }}
             />
             <TextField
               fullWidth
@@ -136,7 +160,9 @@ const Auth = () => {
               value={formData.lastName}
               onChange={handleChange}
               margin="normal"
-              required
+              variant="outlined"
+              InputLabelProps={{ style: { color: colors.grey[100] } }}
+              InputProps={{ style: { color: colors.grey[100] } }}
             />
             <TextField
               fullWidth
@@ -145,8 +171,11 @@ const Auth = () => {
               value={formData.phone}
               onChange={handleChange}
               margin="normal"
-              required
+              variant="outlined"
+              InputLabelProps={{ style: { color: colors.grey[100] } }}
+              InputProps={{ style: { color: colors.grey[100] } }}
             />
+            <Divider sx={{ my: 2, borderColor: colors.grey[300] }} />
           </>
         )}
 
@@ -158,7 +187,9 @@ const Auth = () => {
           value={formData.email}
           onChange={handleChange}
           margin="normal"
-          required
+          variant="outlined"
+          InputLabelProps={{ style: { color: colors.grey[100] } }}
+          InputProps={{ style: { color: colors.grey[100] } }}
         />
         <TextField
           fullWidth
@@ -168,7 +199,9 @@ const Auth = () => {
           value={formData.password}
           onChange={handleChange}
           margin="normal"
-          required
+          variant="outlined"
+          InputLabelProps={{ style: { color: colors.grey[100] } }}
+          InputProps={{ style: { color: colors.grey[100] } }}
         />
 
         <Button
@@ -178,10 +211,14 @@ const Auth = () => {
           sx={{
             mt: 3,
             mb: 2,
-            backgroundColor: colors.greenAccent[600],
+            padding: "0.8rem",
+            background: `linear-gradient(90deg, ${colors.greenAccent[600]}, ${colors.greenAccent[700]})`,
             "&:hover": {
-              backgroundColor: colors.greenAccent[700]
-            }
+              background: `linear-gradient(90deg, ${colors.greenAccent[700]}, ${colors.greenAccent[800]})`,
+            },
+            color: colors.grey[100],
+            textTransform: "none",
+            fontSize: "1.1rem",
           }}
         >
           {isLogin ? "Login" : "Sign Up"}
@@ -190,7 +227,15 @@ const Auth = () => {
         <Button
           fullWidth
           onClick={toggleMode}
-          sx={{ color: colors.grey[100] }}
+          sx={{
+            color: colors.blueAccent[500],
+            "&:hover": {
+              color: colors.blueAccent[600],
+              backgroundColor: "transparent",
+            },
+            textTransform: "none",
+            padding: "0.5rem 0",
+          }}
         >
           {isLogin ? "Need an account? Sign Up" : "Already have an account? Login"}
         </Button>
