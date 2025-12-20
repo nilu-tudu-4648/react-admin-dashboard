@@ -1,7 +1,7 @@
 import { createContext, useState, useMemo } from "react";
 import { createTheme } from "@mui/material/styles";
 
-// color design tokens export
+// Modern color design tokens
 export const tokens = (mode) => ({
   ...(mode === "dark"
     ? {
@@ -26,6 +26,50 @@ export const tokens = (mode) => ({
           700: "#0c101b",
           800: "#080b12",
           900: "#040509",
+        },
+        blue: {
+          100: "#e3f2fd",
+          200: "#bbdefb",
+          300: "#90caf9",
+          400: "#42a5f5",
+          500: "#2196f3",
+          600: "#1976d2",
+          700: "#1565c0",
+          800: "#0d47a1",
+          900: "#0a3d91",
+        },
+        green: {
+          100: "#e8f5e9",
+          200: "#c8e6c9",
+          300: "#a5d6a7",
+          400: "#66bb6a",
+          500: "#4caf50",
+          600: "#43a047",
+          700: "#388e3c",
+          800: "#2e7d32",
+          900: "#1b5e20",
+        },
+        red: {
+          100: "#ffebee",
+          200: "#ffcdd2",
+          300: "#ef9a9a",
+          400: "#ef5350",
+          500: "#f44336",
+          600: "#e53935",
+          700: "#d32f2f",
+          800: "#c62828",
+          900: "#b71c1c",
+        },
+        amber: {
+          100: "#fff8e1",
+          200: "#ffecb3",
+          300: "#ffe082",
+          400: "#ffca28",
+          500: "#ffc107",
+          600: "#ffb300",
+          700: "#ffa000",
+          800: "#ff8f00",
+          900: "#ff6f00",
         },
         greenAccent: {
           100: "#dbf5ee",
@@ -77,12 +121,56 @@ export const tokens = (mode) => ({
           100: "#040509",
           200: "#080b12",
           300: "#0c101b",
-          400: "#f2f0f0", // manually changed
-          500: "#141b2d",
-          600: "#1F2A40",
-          700: "#727681",
-          800: "#a1a4ab",
-          900: "#d0d1d5",
+          400: "#ffffff",
+          500: "#f8fafc",
+          600: "#f1f5f9",
+          700: "#e2e8f0",
+          800: "#cbd5e1",
+          900: "#94a3b8",
+        },
+        blue: {
+          100: "#0a3d91",
+          200: "#0d47a1",
+          300: "#1565c0",
+          400: "#1976d2",
+          500: "#2196f3",
+          600: "#42a5f5",
+          700: "#64b5f6",
+          800: "#90caf9",
+          900: "#bbdefb",
+        },
+        green: {
+          100: "#1b5e20",
+          200: "#2e7d32",
+          300: "#388e3c",
+          400: "#43a047",
+          500: "#4caf50",
+          600: "#66bb6a",
+          700: "#81c784",
+          800: "#a5d6a7",
+          900: "#c8e6c9",
+        },
+        red: {
+          100: "#b71c1c",
+          200: "#c62828",
+          300: "#d32f2f",
+          400: "#e53935",
+          500: "#f44336",
+          600: "#ef5350",
+          700: "#ef9a9a",
+          800: "#ffcdd2",
+          900: "#ffebee",
+        },
+        amber: {
+          100: "#ff6f00",
+          200: "#ff8f00",
+          300: "#ffa000",
+          400: "#ffb300",
+          500: "#ffc107",
+          600: "#ffca28",
+          700: "#ffe082",
+          800: "#ffecb3",
+          900: "#fff8e1",
         },
         greenAccent: {
           100: "#0f2922",
@@ -128,9 +216,8 @@ export const themeSettings = (mode) => {
       mode: mode,
       ...(mode === "dark"
         ? {
-            // palette values for dark mode
             primary: {
-              main: colors.primary[500],
+              main: colors.blue[500],
             },
             secondary: {
               main: colors.greenAccent[500],
@@ -142,12 +229,12 @@ export const themeSettings = (mode) => {
             },
             background: {
               default: colors.primary[500],
+              paper: colors.primary[400],
             },
           }
         : {
-            // palette values for light mode
             primary: {
-              main: colors.primary[100],
+              main: "#1565c0",
             },
             secondary: {
               main: colors.greenAccent[500],
@@ -158,36 +245,77 @@ export const themeSettings = (mode) => {
               light: colors.grey[100],
             },
             background: {
-              default: "#fcfcfc",
+              default: "#f0f4f8",
+              paper: "#ffffff",
             },
           }),
     },
     typography: {
-      fontFamily: ["Source Sans Pro", "sans-serif"].join(","),
-      fontSize: 12,
+      fontFamily: ["DM Sans", "Inter", "sans-serif"].join(","),
+      fontSize: 13,
       h1: {
-        fontFamily: ["Source Sans Pro", "sans-serif"].join(","),
+        fontFamily: ["DM Sans", "Inter", "sans-serif"].join(","),
         fontSize: 40,
+        fontWeight: 700,
       },
       h2: {
-        fontFamily: ["Source Sans Pro", "sans-serif"].join(","),
+        fontFamily: ["DM Sans", "Inter", "sans-serif"].join(","),
         fontSize: 32,
+        fontWeight: 600,
       },
       h3: {
-        fontFamily: ["Source Sans Pro", "sans-serif"].join(","),
+        fontFamily: ["DM Sans", "Inter", "sans-serif"].join(","),
         fontSize: 24,
+        fontWeight: 600,
       },
       h4: {
-        fontFamily: ["Source Sans Pro", "sans-serif"].join(","),
+        fontFamily: ["DM Sans", "Inter", "sans-serif"].join(","),
         fontSize: 20,
+        fontWeight: 600,
       },
       h5: {
-        fontFamily: ["Source Sans Pro", "sans-serif"].join(","),
+        fontFamily: ["DM Sans", "Inter", "sans-serif"].join(","),
         fontSize: 16,
+        fontWeight: 500,
       },
       h6: {
-        fontFamily: ["Source Sans Pro", "sans-serif"].join(","),
+        fontFamily: ["DM Sans", "Inter", "sans-serif"].join(","),
         fontSize: 14,
+        fontWeight: 500,
+      },
+      body1: {
+        fontFamily: ["DM Sans", "Inter", "sans-serif"].join(","),
+        fontSize: 14,
+      },
+      body2: {
+        fontFamily: ["DM Sans", "Inter", "sans-serif"].join(","),
+        fontSize: 13,
+      },
+    },
+    components: {
+      MuiButton: {
+        styleOverrides: {
+          root: {
+            textTransform: "none",
+            borderRadius: 8,
+            fontWeight: 600,
+          },
+        },
+      },
+      MuiPaper: {
+        styleOverrides: {
+          root: {
+            borderRadius: 12,
+          },
+        },
+      },
+      MuiCard: {
+        styleOverrides: {
+          root: {
+            borderRadius: 12,
+            boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+          },
+        },
       },
     },
   };
@@ -199,7 +327,7 @@ export const ColorModeContext = createContext({
 });
 
 export const useMode = () => {
-  const [mode, setMode] = useState("dark");
+  const [mode, setMode] = useState("light");
 
   const colorMode = useMemo(
     () => ({
